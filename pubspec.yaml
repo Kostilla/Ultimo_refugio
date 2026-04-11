@@ -1,0 +1,17 @@
+name: ultimo_refugio
+description: Juego cooperativo persistente
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.0
+  supabase_flutter: ^2.5.6
+
+flutter:
+  uses-material-design: true
