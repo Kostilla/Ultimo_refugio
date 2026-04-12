@@ -72,24 +72,97 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
     }
   }
 
-  int _upgradeCost(int level) {
-    return level * 50;
+  Map<String, int> _upgradeCost(String type, int level) {
+    final nextLevel = level + 1;
+
+    switch (type) {
+      case 'generator':
+        return {
+          'metal': 40 * nextLevel,
+          'energy': 20 * nextLevel,
+        };
+      case 'farm':
+        return {
+          'metal': 30 * nextLevel,
+          'water': 15 * nextLevel,
+        };
+      case 'water':
+        return {
+          'metal': 30 * nextLevel,
+          'energy': 15 * nextLevel,
+        };
+      case 'factory':
+        return {
+          'metal': 50 * nextLevel,
+          'food': 20 * nextLevel,
+        };
+      default:
+        return {
+          'metal': 50 * nextLevel,
+        };
+    }
+  }
+
+  String _formatCost(Map<String, int> cost) {
+    final parts = <String>[];
+
+    if ((cost['food'] ?? 0) > 0) {
+      parts.add('🍖 ${cost['food']}');
+    }
+    if ((cost['water'] ?? 0) > 0) {
+      parts.add('💧 ${cost['water']}');
+    }
+    if ((cost['energy'] ?? 0) > 0) {
+      parts.add('⚡ ${cost['energy']}');
+    }
+    if ((cost['metal'] ?? 0) > 0) {
+      parts.add('🔩 ${cost['metal']}');
+    }
+
+    return parts.join(' | ');
+  }
+
+  bool _canAfford(Map<String, dynamic>? resources, Map<String, int> cost) {
+    if (resources == null) return false;
+
+    final food = (resources['food'] as num?)?.toInt() ?? 0;
+    final water = (resources['water'] as num?)?.toInt() ?? 0;
+    final energy = (resources['energy'] as num?)?.toInt() ?? 0;
+    final metal = (resources['metal'] as num?)?.toInt() ?? 0;
+
+    return food >= (cost['food'] ?? 0) &&
+        water >= (cost['water'] ?? 0) &&
+        energy >= (cost['energy'] ?? 0) &&
+        metal >= (cost['metal'] ?? 0);
   }
 
   Future<void> _upgradeBuilding({
     required String colonyId,
     required String buildingId,
+    required String type,
     required int currentLevel,
-    required int currentMetal,
+    required Map<String, dynamic>? resources,
   }) async {
-    final cost = _upgradeCost(currentLevel);
-
-    if (currentMetal < cost) {
-      throw Exception('No tienes suficiente metal');
+    if (resources == null) {
+      throw Exception('No se encontraron recursos');
     }
 
+    final cost = _upgradeCost(type, currentLevel);
+
+    if (!_canAfford(resources, cost)) {
+      throw Exception('No tienes suficientes recursos');
+    }
+
+    final currentFood = (resources['food'] as num?)?.toInt() ?? 0;
+    final currentWater = (resources['water'] as num?)?.toInt() ?? 0;
+    final currentEnergy = (resources['energy'] as num?)?.toInt() ?? 0;
+    final currentMetal = (resources['metal'] as num?)?.toInt() ?? 0;
+
     await supabase.from('colony_resources').update({
-      'metal': currentMetal - cost,
+      'food': currentFood - (cost['food'] ?? 0),
+      'water': currentWater - (cost['water'] ?? 0),
+      'energy': currentEnergy - (cost['energy'] ?? 0),
+      'metal': currentMetal - (cost['metal'] ?? 0),
     }).eq('colony_id', colonyId);
 
     await supabase.from('colony_buildings').update({
@@ -129,8 +202,18 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
           final resources = data['resources'] as Map<String, dynamic>?;
           final buildings = (data['buildings'] as List<dynamic>? ?? []);
 
-          final currentMetal =
-              resources == null ? 0 : (resources['metal'] as num).toInt();
+          final currentFood = resources == null
+              ? 0
+              : (resources['food'] as num).toInt();
+          final currentWater = resources == null
+              ? 0
+              : (resources['water'] as num).toInt();
+          final currentEnergy = resources == null
+              ? 0
+              : (resources['energy'] as num).toInt();
+          final currentMetal = resources == null
+              ? 0
+              : (resources['metal'] as num).toInt();
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -141,8 +224,25 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
               children: [
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.precision_manufacturing),
-                    title: const Text('Metal disponible'),
+                    title: const Text('🍖 Comida'),
+                    trailing: Text('$currentFood'),
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                    title: const Text('💧 Agua'),
+                    trailing: Text('$currentWater'),
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                    title: const Text('⚡ Energía'),
+                    trailing: Text('$currentEnergy'),
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                    title: const Text('🔩 Metal'),
                     trailing: Text('$currentMetal'),
                   ),
                 ),
@@ -150,41 +250,47 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                 ...buildings.map((b) {
                   final type = '${b['type']}';
                   final level = (b['level'] as num).toInt();
-                  final cost = _upgradeCost(level);
+                  final cost = _upgradeCost(type, level);
+                  final canAfford = _canAfford(resources, cost);
 
                   return Card(
                     child: ListTile(
                       title: Text(_buildingLabel(type)),
                       subtitle: Text(
-                        '${_buildingDescription(type)}\nNivel actual: $level\nMejora: $cost metal',
+                        '${_buildingDescription(type)}\n'
+                        'Nivel actual: $level\n'
+                        'Coste mejora: ${_formatCost(cost)}',
                       ),
                       isThreeLine: true,
                       trailing: ElevatedButton(
-                        onPressed: () async {
-                          try {
-                            await _upgradeBuilding(
-                              colonyId: colonyId,
-                              buildingId: b['id'] as String,
-                              currentLevel: level,
-                              currentMetal: currentMetal,
-                            );
+                        onPressed: canAfford
+                            ? () async {
+                                try {
+                                  await _upgradeBuilding(
+                                    colonyId: colonyId,
+                                    buildingId: b['id'] as String,
+                                    type: type,
+                                    currentLevel: level,
+                                    resources: resources,
+                                  );
 
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Edificio mejorado'),
-                              ),
-                            );
-                            setState(() {});
-                          } catch (e) {
-                            if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: $e'),
-                              ),
-                            );
-                          }
-                        },
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Edificio mejorado'),
+                                    ),
+                                  );
+                                  setState(() {});
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                    ),
+                                  );
+                                }
+                              }
+                            : null,
                         child: const Text('Mejorar'),
                       ),
                     ),
