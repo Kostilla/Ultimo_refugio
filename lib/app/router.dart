@@ -27,21 +27,26 @@ final router = GoRouter(
   refreshListenable: GoRouterRefreshStream(
     supabase.auth.onAuthStateChange,
   ),
-  redirect: (context, state) {
-    final loggedIn = supabase.auth.currentSession != null;
-    final isAuthRoute = state.matchedLocation == '/login' ||
-        state.matchedLocation == '/register';
+  redirect: (context, state) async {
+  final user = supabase.auth.currentUser;
 
-    if (!loggedIn) {
-      return isAuthRoute ? null : '/login';
-    }
+  // No logueado → login
+  if (user == null) return '/login';
 
-    if (isAuthRoute) {
-      return '/colony-entry';
-    }
+  final inColony = await hasColony();
 
-    return null;
-  },
+  // Si está logueado y NO tiene colonia → crear
+  if (!inColony && state.uri.path != '/colony') {
+    return '/colony';
+  }
+
+  // Si tiene colonia → ir a home
+  if (inColony && state.uri.path != '/home') {
+    return '/home';
+  }
+
+  return null;
+},
   routes: [
     GoRoute(
       path: '/login',

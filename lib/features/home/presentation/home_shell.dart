@@ -76,17 +76,23 @@ class ColonyBaseScreen extends StatelessWidget {
     };
   }
 
-  final lastUpdated = DateTime.tryParse(resources['last_updated'] ?? '');
-  if (lastUpdated != null) {
-    final now = DateTime.now().toUtc();
-    final diffMinutes = now.difference(lastUpdated.toUtc()).inMinutes;
+  final rawLastUpdated = resources['last_updated'];
+final lastUpdated = rawLastUpdated == null
+    ? null
+    : DateTime.parse(rawLastUpdated.toString()).toUtc();
 
-    if (diffMinutes > 0) {
+if (lastUpdated != null) {
+  final now = DateTime.now().toUtc();
+  final diffMinutes = now.difference(lastUpdated).inMinutes;
+
+    if (diffMinutes > 0 && diffMinutes < 1440) {
+      int cap(int value, int max) => value > max ? max : value;
+
       final updatedResources = {
-        'food': (resources['food'] as int) + diffMinutes * 1,
-        'water': (resources['water'] as int) + diffMinutes * 1,
-        'energy': (resources['energy'] as int) + diffMinutes * 2,
-        'metal': (resources['metal'] as int) + diffMinutes * 1,
+        'food': cap((resources['food'] as int) + diffMinutes * 1, 500),
+        'water': cap((resources['water'] as int) + diffMinutes * 1, 500),
+        'energy': cap((resources['energy'] as int) + diffMinutes * 2, 500),
+        'metal': cap((resources['metal'] as int) + diffMinutes * 1, 500),
         'last_updated': now.toIso8601String(),
       };
 
