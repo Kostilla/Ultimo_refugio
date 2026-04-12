@@ -13,10 +13,18 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  void _openEventsTab() {
+    setState(() {
+      _index = 2;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
-      const ColonyBaseScreen(),
+      ColonyBaseScreen(
+        onOpenEvents: _openEventsTab,
+      ),
       const BuildingsScreen(),
       const EventsScreen(),
       const Scaffold(
@@ -60,7 +68,12 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class ColonyBaseScreen extends StatelessWidget {
-  const ColonyBaseScreen({super.key});
+  const ColonyBaseScreen({
+    super.key,
+    required this.onOpenEvents,
+  });
+
+  final VoidCallback onOpenEvents;
 
   int _cap(int value, int max) => value > max ? max : value;
 
@@ -127,6 +140,7 @@ class ColonyBaseScreen extends StatelessWidget {
           'metal': 0,
         },
         'capacity': 0,
+        'active_event_count': 0,
       };
     }
 
@@ -280,7 +294,9 @@ class ColonyBaseScreen extends StatelessWidget {
                     child: ListTile(
                       leading: const Icon(Icons.warning_amber_rounded),
                       title: const Text('Eventos activos'),
+                      subtitle: const Text('Pulsa para verlos'),
                       trailing: Text('$activeEventCount'),
+                      onTap: onOpenEvents,
                     ),
                   ),
                 const SizedBox(height: 20),
