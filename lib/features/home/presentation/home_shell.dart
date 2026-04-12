@@ -55,15 +55,21 @@ class ColonyBaseScreen extends StatelessWidget {
 
     final colony = await supabase
         .from('colonies')
-        .select('name, join_code, created_at')
+        .select('name, join_code')
         .eq('id', membership['colony_id'])
         .single();
+
+    final resources = await supabase
+        .from('colony_resources')
+        .select()
+        .eq('colony_id', membership['colony_id'])
+        .maybeSingle();
 
     return {
       'role': membership['role'],
       'name': colony['name'],
       'join_code': colony['join_code'],
-      'created_at': colony['created_at'],
+      'resources': resources,
     };
   }
 
@@ -82,16 +88,18 @@ class ColonyBaseScreen extends StatelessWidget {
 
           if (snapshot.hasError) {
             return Center(
-              child: Text('Error cargando colonia: ${snapshot.error}'),
+              child: Text('Error: ${snapshot.error}'),
             );
           }
 
           final data = snapshot.data;
           if (data == null) {
             return const Center(
-              child: Text('No perteneces a ninguna colonia'),
+              child: Text('No tienes colonia'),
             );
           }
+
+          final resources = data['resources'];
 
           return Padding(
             padding: const EdgeInsets.all(24),
@@ -99,28 +107,42 @@ class ColonyBaseScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  data['name'] ?? 'Sin nombre',
+                  data['name'],
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.vpn_key),
-                    title: const Text('Código de unión'),
-                    subtitle: Text('${data['join_code']}'),
+                    title: const Text('Código'),
+                    subtitle: Text(data['join_code']),
                   ),
                 ),
-                const SizedBox(height: 12),
+
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.badge),
-                    title: const Text('Tu rol'),
-                    subtitle: Text('${data['role']}'),
+                    title: const Text('Rol'),
+                    subtitle: Text(data['role']),
                   ),
                 ),
+
+                const SizedBox(height: 20),
+                const Text(
+                  'Recursos',
+                  style: TextStyle(fontSize: 20),
+                ),
+
+                const SizedBox(height: 10),
+
+                if (resources != null) ...[
+                  Text('🍖 Comida: ${resources['food']}'),
+                  Text('💧 Agua: ${resources['water']}'),
+                  Text('⚡ Energía: ${resources['energy']}'),
+                  Text('🔩 Metal: ${resources['metal']}'),
+                ]
               ],
             ),
           );
