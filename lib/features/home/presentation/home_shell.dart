@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ultimo_refugio/core/services/supabase_service.dart';
+import 'buildings_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -15,9 +16,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final screens = [
       const ColonyBaseScreen(),
-      const Scaffold(
-        body: Center(child: Text('Edificios')),
-      ),
+      const BuildingsScreen(),
       const Scaffold(
         body: Center(child: Text('Eventos')),
       ),
