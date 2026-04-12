@@ -8,12 +8,21 @@ class CreateOrJoinColonyScreen extends ConsumerStatefulWidget {
   const CreateOrJoinColonyScreen({super.key});
 
   @override
-  ConsumerState<CreateOrJoinColonyScreen> createState() => _CreateOrJoinColonyScreenState();
+  ConsumerState<CreateOrJoinColonyScreen> createState() =>
+      _CreateOrJoinColonyScreenState();
 }
 
-class _CreateOrJoinColonyScreenState extends ConsumerState<CreateOrJoinColonyScreen> {
+class _CreateOrJoinColonyScreenState
+    extends ConsumerState<CreateOrJoinColonyScreen> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _codeController.dispose();
+    super.dispose();
+  }
 
   Future<void> _create() async {
     ref.read(colonyLoadingProvider.notifier).state = true;
@@ -23,8 +32,10 @@ class _CreateOrJoinColonyScreenState extends ConsumerState<CreateOrJoinColonyScr
             _nameController.text,
           );
 
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      context.go('/home');
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -41,8 +52,10 @@ class _CreateOrJoinColonyScreenState extends ConsumerState<CreateOrJoinColonyScr
             _codeController.text,
           );
 
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      context.go('/home');
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -56,29 +69,93 @@ class _CreateOrJoinColonyScreenState extends ConsumerState<CreateOrJoinColonyScr
     final loading = ref.watch(colonyLoadingProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Colonia')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      appBar: AppBar(
+        title: const Text('Colonia'),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(24),
           children: [
-            const Text('Crear colonia'),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Nombre'),
+            const SizedBox(height: 8),
+            const Text(
+              'Bienvenido a tu refugio',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            ElevatedButton(
-              onPressed: loading ? null : _create,
-              child: const Text('Crear'),
+            const SizedBox(height: 8),
+            const Text(
+              'Crea una colonia nueva o únete a una existente con un código.',
+              textAlign: TextAlign.center,
             ),
-            const Divider(),
-            const Text('Unirse a colonia'),
-            TextField(
-              controller: _codeController,
-              decoration: const InputDecoration(labelText: 'Código'),
+            const SizedBox(height: 24),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Crear colonia',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _nameController,
+                      enabled: !loading,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre de la colonia',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: loading ? null : _create,
+                      child: Text(
+                        loading ? 'Procesando...' : 'Crear colonia',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            ElevatedButton(
-              onPressed: loading ? null : _join,
-              child: const Text('Unirse'),
+            const SizedBox(height: 20),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Unirse a colonia',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _codeController,
+                      enabled: !loading,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Código de unión',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: loading ? null : _join,
+                      child: const Text('Unirse'),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
