@@ -71,19 +71,21 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
   }
 
   String _buildingLabel(String type) {
-    switch (type) {
-      case 'generator':
-        return 'Generador';
-      case 'farm':
-        return 'Invernadero';
-      case 'water':
-        return 'Depuradora';
-      case 'factory':
-        return 'Taller';
-      default:
-        return type;
-    }
+  switch (type) {
+    case 'generator':
+      return 'Generador';
+    case 'farm':
+      return 'Invernadero';
+    case 'water':
+      return 'Depuradora';
+    case 'factory':
+      return 'Taller';
+    case 'storage':
+      return 'Almacén';
+    default:
+      return type;
   }
+}
 
   String _buildingDescription(String type) {
     switch (type) {
