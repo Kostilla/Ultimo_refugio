@@ -132,6 +132,11 @@ class ColonyBaseScreen extends StatelessWidget {
       }
     }
 
+		final buildings = await supabase
+    .from('colony_buildings')
+    .select()
+    .eq('colony_id', colonyId);
+
     return {
       'role': membership['role'],
       'name': colony['name'],
