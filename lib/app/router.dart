@@ -28,25 +28,34 @@ final router = GoRouter(
     supabase.auth.onAuthStateChange,
   ),
   redirect: (context, state) async {
-  final user = supabase.auth.currentUser;
+    final user = supabase.auth.currentUser;
+    final currentPath = state.uri.path;
 
-  // No logueado → login
-  if (user == null) return '/login';
+    final isLogin = currentPath == '/login';
+    final isRegister = currentPath == '/register';
+    final isAuthRoute = isLogin || isRegister;
+    final isColonyEntry = currentPath == '/colony-entry';
+    final isHome = currentPath == '/home';
 
-  final inColony = await hasColony();
+    // No logueado: solo puede estar en login o register
+    if (user == null) {
+      return isAuthRoute ? null : '/login';
+    }
 
-  // Si está logueado y NO tiene colonia → crear
-  if (!inColony && state.uri.path != '/colony') {
-    return '/colony';
-  }
+    final inColony = await hasColony();
 
-  // Si tiene colonia → ir a home
-  if (inColony && state.uri.path != '/home') {
-    return '/home';
-  }
+    // Logueado pero sin colonia: debe ir a /colony-entry
+    if (!inColony) {
+      return isColonyEntry ? null : '/colony-entry';
+    }
 
-  return null;
-},
+    // Logueado y con colonia: no debe quedarse en login/register/colony-entry
+    if (inColony) {
+      return isHome ? null : '/home';
+    }
+
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/login',
@@ -69,7 +78,9 @@ final router = GoRouter(
 
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+    _subscription = stream.asBroadcastStream().listen((_) {
+      notifyListeners();
+    });
   }
 
   late final StreamSubscription<dynamic> _subscription;
