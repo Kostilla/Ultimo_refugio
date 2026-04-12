@@ -33,6 +33,14 @@ class ColonyRepository {
     });
   }
 
+  await supabase.from('colony_resources').insert({
+  'colony_id': colony['id'],
+  'food': 100,
+  'water': 100,
+  'energy': 100,
+  'metal': 100,
+  });
+
   Future<void> joinColony(String joinCode) async {
     final user = supabase.auth.currentUser;
     if (user == null) throw Exception('Usuario no autenticado');

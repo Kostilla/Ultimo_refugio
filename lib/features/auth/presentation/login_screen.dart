@@ -16,8 +16,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
 
     ref.read(authLoadingProvider.notifier).state = true;
 
@@ -27,10 +35,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             password: _passwordController.text,
           );
 
-      if (mounted) context.go('/colony-entry');
+      if (mounted) {
+        context.go('/colony-entry');
+      }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text('Error al iniciar sesión: $e')),
       );
     } finally {
       ref.read(authLoadingProvider.notifier).state = false;
@@ -42,17 +53,66 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = ref.watch(authLoadingProvider);
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextFormField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email')),
-            TextFormField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Password')),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: isLoading ? null : _submit, child: const Text('Login')),
-            TextButton(onPressed: () => context.go('/register'), child: const Text('Register'))
-          ],
+      appBar: AppBar(title: const Text('Iniciar sesión')),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Introduce tu email';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Email no válido';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Contraseña',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Introduce tu contraseña';
+                      }
+                      return null;
+                    },
+                    onFieldSubmitted: (_) => _submit(),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: isLoading ? null : _submit,
+                    child: Text(
+                      isLoading ? 'Entrando...' : 'Iniciar sesión',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: isLoading ? null : () => context.go('/register'),
+                    child: const Text('Crear cuenta'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
