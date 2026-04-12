@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ultimo_refugio/core/services/supabase_service.dart';
 import 'buildings_screen.dart';
+import 'events_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -17,9 +18,7 @@ class _HomeShellState extends State<HomeShell> {
     final screens = [
       const ColonyBaseScreen(),
       const BuildingsScreen(),
-      const Scaffold(
-        body: Center(child: Text('Eventos')),
-      ),
+      const EventsScreen(),
       const Scaffold(
         body: Center(child: Text('Colonia')),
       ),
@@ -188,6 +187,12 @@ class ColonyBaseScreen extends StatelessWidget {
       }
     }
 
+    final activeEvents = await supabase
+        .from('colony_events')
+        .select('id')
+        .eq('colony_id', colonyId)
+        .eq('status', 'active');
+
     return {
       'role': membership['role'],
       'name': colony['name'],
@@ -201,6 +206,7 @@ class ColonyBaseScreen extends StatelessWidget {
         'metal': metalRate,
       },
       'capacity': capacity,
+      'active_event_count': activeEvents.length,
     };
   }
 
@@ -236,6 +242,7 @@ class ColonyBaseScreen extends StatelessWidget {
           final rates = data['rates'] as Map<String, dynamic>;
           final buildings = (data['buildings'] as List<dynamic>? ?? []);
           final capacity = data['capacity'];
+          final activeEventCount = data['active_event_count'] as int? ?? 0;
 
           return RefreshIndicator(
             onRefresh: () async {},
@@ -268,6 +275,14 @@ class ColonyBaseScreen extends StatelessWidget {
                     trailing: Text('$capacity'),
                   ),
                 ),
+                if (activeEventCount > 0)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.warning_amber_rounded),
+                      title: const Text('Eventos activos'),
+                      trailing: Text('$activeEventCount'),
+                    ),
+                  ),
                 const SizedBox(height: 20),
                 const Text(
                   'Recursos',
