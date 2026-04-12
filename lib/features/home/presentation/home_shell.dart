@@ -75,6 +75,8 @@ class ColonyBaseScreen extends StatelessWidget {
         return 'Depuradora';
       case 'factory':
         return 'Taller';
+      case 'storage':
+        return 'Almacén';
       default:
         return type;
     }
@@ -125,6 +127,7 @@ class ColonyBaseScreen extends StatelessWidget {
           'energy': 0,
           'metal': 0,
         },
+        'capacity': 0,
       };
     }
 
@@ -133,6 +136,9 @@ class ColonyBaseScreen extends StatelessWidget {
       if (filtered.isEmpty) return 1;
       return (filtered.first['level'] as num).toInt();
     }
+
+    final storageLevel = getLevel('storage');
+    final capacity = storageLevel * 500;
 
     final foodRate = getLevel('farm');
     final waterRate = getLevel('water');
@@ -152,19 +158,19 @@ class ColonyBaseScreen extends StatelessWidget {
         final updatedResources = {
           'food': _cap(
             (resources['food'] as int) + diffMinutes * foodRate,
-            500,
+            capacity,
           ),
           'water': _cap(
             (resources['water'] as int) + diffMinutes * waterRate,
-            500,
+            capacity,
           ),
           'energy': _cap(
             (resources['energy'] as int) + diffMinutes * energyRate,
-            500,
+            capacity,
           ),
           'metal': _cap(
             (resources['metal'] as int) + diffMinutes * metalRate,
-            500,
+            capacity,
           ),
           'last_updated': now.toIso8601String(),
         };
@@ -194,6 +200,7 @@ class ColonyBaseScreen extends StatelessWidget {
         'energy': energyRate,
         'metal': metalRate,
       },
+      'capacity': capacity,
     };
   }
 
@@ -228,6 +235,7 @@ class ColonyBaseScreen extends StatelessWidget {
           final resources = data['resources'] as Map<String, dynamic>?;
           final rates = data['rates'] as Map<String, dynamic>;
           final buildings = (data['buildings'] as List<dynamic>? ?? []);
+          final capacity = data['capacity'];
 
           return RefreshIndicator(
             onRefresh: () async {},
@@ -254,6 +262,12 @@ class ColonyBaseScreen extends StatelessWidget {
                     subtitle: Text('${data['role']}'),
                   ),
                 ),
+                Card(
+                  child: ListTile(
+                    title: const Text('Capacidad máxima'),
+                    trailing: Text('$capacity'),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   'Recursos',
@@ -268,7 +282,7 @@ class ColonyBaseScreen extends StatelessWidget {
                     child: ListTile(
                       title: const Text('🍖 Comida'),
                       trailing: Text(
-                        '${resources['food']} (+${rates['food']}/min)',
+                        '${resources['food']} / $capacity (+${rates['food']}/min)',
                       ),
                     ),
                   ),
@@ -276,7 +290,7 @@ class ColonyBaseScreen extends StatelessWidget {
                     child: ListTile(
                       title: const Text('💧 Agua'),
                       trailing: Text(
-                        '${resources['water']} (+${rates['water']}/min)',
+                        '${resources['water']} / $capacity (+${rates['water']}/min)',
                       ),
                     ),
                   ),
@@ -284,7 +298,7 @@ class ColonyBaseScreen extends StatelessWidget {
                     child: ListTile(
                       title: const Text('⚡ Energía'),
                       trailing: Text(
-                        '${resources['energy']} (+${rates['energy']}/min)',
+                        '${resources['energy']} / $capacity (+${rates['energy']}/min)',
                       ),
                     ),
                   ),
@@ -292,7 +306,7 @@ class ColonyBaseScreen extends StatelessWidget {
                     child: ListTile(
                       title: const Text('🔩 Metal'),
                       trailing: Text(
-                        '${resources['metal']} (+${rates['metal']}/min)',
+                        '${resources['metal']} / $capacity (+${rates['metal']}/min)',
                       ),
                     ),
                   ),
