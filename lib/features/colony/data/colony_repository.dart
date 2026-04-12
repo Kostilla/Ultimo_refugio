@@ -51,27 +51,32 @@ class ColonyRepository {
     });
 
     await supabase.from('colony_buildings').insert([
-      {
-        'colony_id': colonyId,
-        'type': 'generator',
-        'level': 1,
-      },
-      {
-        'colony_id': colonyId,
-        'type': 'farm',
-        'level': 1,
-      },
-      {
-        'colony_id': colonyId,
-        'type': 'water',
-        'level': 1,
-      },
-      {
-        'colony_id': colonyId,
-        'type': 'factory',
-        'level': 1,
-      },
-    ]);
+  {
+    'colony_id': colonyId,
+    'type': 'generator',
+    'level': 1,
+  },
+  {
+    'colony_id': colonyId,
+    'type': 'farm',
+    'level': 1,
+  },
+  {
+    'colony_id': colonyId,
+    'type': 'water',
+    'level': 1,
+  },
+  {
+    'colony_id': colonyId,
+    'type': 'factory',
+    'level': 1,
+  },
+  {
+    'colony_id': colonyId,
+    'type': 'storage',
+    'level': 1,
+  },
+]);
   }
 
   Future<void> joinColony(String joinCode) async {
