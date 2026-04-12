@@ -7,7 +7,10 @@ class ColonyRepository {
 
   String _generateJoinCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    return List.generate(6, (_) => chars[_random.nextInt(chars.length)]).join();
+    return List.generate(
+      6,
+      (_) => chars[_random.nextInt(chars.length)],
+    ).join();
   }
 
   Future<void> createColony(String name) async {
@@ -51,32 +54,37 @@ class ColonyRepository {
     });
 
     await supabase.from('colony_buildings').insert([
-  {
-    'colony_id': colonyId,
-    'type': 'generator',
-    'level': 1,
-  },
-  {
-    'colony_id': colonyId,
-    'type': 'farm',
-    'level': 1,
-  },
-  {
-    'colony_id': colonyId,
-    'type': 'water',
-    'level': 1,
-  },
-  {
-    'colony_id': colonyId,
-    'type': 'factory',
-    'level': 1,
-  },
-  {
-    'colony_id': colonyId,
-    'type': 'storage',
-    'level': 1,
-  },
-]);
+      {
+        'colony_id': colonyId,
+        'type': 'generator',
+        'level': 1,
+        'is_upgrading': false,
+      },
+      {
+        'colony_id': colonyId,
+        'type': 'farm',
+        'level': 1,
+        'is_upgrading': false,
+      },
+      {
+        'colony_id': colonyId,
+        'type': 'water',
+        'level': 1,
+        'is_upgrading': false,
+      },
+      {
+        'colony_id': colonyId,
+        'type': 'factory',
+        'level': 1,
+        'is_upgrading': false,
+      },
+      {
+        'colony_id': colonyId,
+        'type': 'storage',
+        'level': 1,
+        'is_upgrading': false,
+      },
+    ]);
   }
 
   Future<void> joinColony(String joinCode) async {
