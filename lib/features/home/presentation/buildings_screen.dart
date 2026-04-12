@@ -71,21 +71,21 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
   }
 
   String _buildingLabel(String type) {
-  switch (type) {
-    case 'generator':
-      return 'Generador';
-    case 'farm':
-      return 'Invernadero';
-    case 'water':
-      return 'Depuradora';
-    case 'factory':
-      return 'Taller';
-    case 'storage':
-      return 'Almacén';
-    default:
-      return type;
+    switch (type) {
+      case 'generator':
+        return 'Generador';
+      case 'farm':
+        return 'Invernadero';
+      case 'water':
+        return 'Depuradora';
+      case 'factory':
+        return 'Taller';
+      case 'storage':
+        return 'Almacén';
+      default:
+        return type;
+    }
   }
-}
 
   String _buildingDescription(String type) {
     switch (type) {
@@ -97,6 +97,8 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
         return 'Aumenta la producción de agua';
       case 'factory':
         return 'Aumenta la producción de metal';
+      case 'storage':
+        return 'Aumenta la capacidad máxima de recursos';
       default:
         return '';
     }
@@ -125,6 +127,11 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
         return {
           'metal': 50 * nextLevel,
           'food': 20 * nextLevel,
+        };
+      case 'storage':
+        return {
+          'metal': 60 * nextLevel,
+          'energy': 25 * nextLevel,
         };
       default:
         return {
