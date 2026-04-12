@@ -65,6 +65,21 @@ class ColonyBaseScreen extends StatelessWidget {
 
   int _cap(int value, int max) => value > max ? max : value;
 
+  String _buildingLabel(String type) {
+    switch (type) {
+      case 'generator':
+        return 'Generador';
+      case 'farm':
+        return 'Invernadero';
+      case 'water':
+        return 'Depuradora';
+      case 'factory':
+        return 'Taller';
+      default:
+        return type;
+    }
+  }
+
   Future<Map<String, dynamic>?> _loadColony() async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
@@ -92,14 +107,37 @@ class ColonyBaseScreen extends StatelessWidget {
         .eq('colony_id', colonyId)
         .maybeSingle();
 
+    final buildings = await supabase
+        .from('colony_buildings')
+        .select()
+        .eq('colony_id', colonyId);
+
     if (resources == null) {
       return {
         'role': membership['role'],
         'name': colony['name'],
         'join_code': colony['join_code'],
         'resources': null,
+        'buildings': buildings,
+        'rates': {
+          'food': 0,
+          'water': 0,
+          'energy': 0,
+          'metal': 0,
+        },
       };
     }
+
+    int getLevel(String type) {
+      final filtered = buildings.where((e) => e['type'] == type).toList();
+      if (filtered.isEmpty) return 1;
+      return (filtered.first['level'] as num).toInt();
+    }
+
+    final foodRate = getLevel('farm');
+    final waterRate = getLevel('water');
+    final energyRate = getLevel('generator') * 2;
+    final metalRate = getLevel('factory');
 
     final rawLastUpdated = resources['last_updated'];
     final lastUpdated = rawLastUpdated == null
@@ -112,10 +150,22 @@ class ColonyBaseScreen extends StatelessWidget {
 
       if (diffMinutes > 0 && diffMinutes < 1440) {
         final updatedResources = {
-          'food': _cap((resources['food'] as int) + diffMinutes * 1, 500),
-          'water': _cap((resources['water'] as int) + diffMinutes * 1, 500),
-          'energy': _cap((resources['energy'] as int) + diffMinutes * 2, 500),
-          'metal': _cap((resources['metal'] as int) + diffMinutes * 1, 500),
+          'food': _cap(
+            (resources['food'] as int) + diffMinutes * foodRate,
+            500,
+          ),
+          'water': _cap(
+            (resources['water'] as int) + diffMinutes * waterRate,
+            500,
+          ),
+          'energy': _cap(
+            (resources['energy'] as int) + diffMinutes * energyRate,
+            500,
+          ),
+          'metal': _cap(
+            (resources['metal'] as int) + diffMinutes * metalRate,
+            500,
+          ),
           'last_updated': now.toIso8601String(),
         };
 
@@ -132,16 +182,18 @@ class ColonyBaseScreen extends StatelessWidget {
       }
     }
 
-		final buildings = await supabase
-    .from('colony_buildings')
-    .select()
-    .eq('colony_id', colonyId);
-
     return {
       'role': membership['role'],
       'name': colony['name'],
       'join_code': colony['join_code'],
       'resources': resources,
+      'buildings': buildings,
+      'rates': {
+        'food': foodRate,
+        'water': waterRate,
+        'energy': energyRate,
+        'metal': metalRate,
+      },
     };
   }
 
@@ -173,73 +225,103 @@ class ColonyBaseScreen extends StatelessWidget {
             );
           }
 
-          final resources = data['resources'];
+          final resources = data['resources'] as Map<String, dynamic>?;
+          final rates = data['rates'] as Map<String, dynamic>;
+          final buildings = (data['buildings'] as List<dynamic>? ?? []);
 
-          return ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Text(
-                data['name'],
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+          return RefreshIndicator(
+            onRefresh: () async {},
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Text(
+                  '${data['name']}',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: ListTile(
-                  title: const Text('Código'),
-                  subtitle: Text(data['join_code']),
-                ),
-              ),
-              Card(
-                child: ListTile(
-                  title: const Text('Rol'),
-                  subtitle: Text(data['role']),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Recursos',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (resources != null) ...[
+                const SizedBox(height: 16),
                 Card(
                   child: ListTile(
-                    title: const Text('🍖 Comida'),
-                    trailing: Text('${resources['food']}'),
+                    title: const Text('Código'),
+                    subtitle: Text('${data['join_code']}'),
                   ),
                 ),
                 Card(
                   child: ListTile(
-                    title: const Text('💧 Agua'),
-                    trailing: Text('${resources['water']}'),
+                    title: const Text('Rol'),
+                    subtitle: Text('${data['role']}'),
                   ),
                 ),
-                Card(
-                  child: ListTile(
-                    title: const Text('⚡ Energía'),
-                    trailing: Text('${resources['energy']}'),
+                const SizedBox(height: 20),
+                const Text(
+                  'Recursos',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Card(
-                  child: ListTile(
-                    title: const Text('🔩 Metal'),
-                    trailing: Text('${resources['metal']}'),
+                const SizedBox(height: 10),
+                if (resources != null) ...[
+                  Card(
+                    child: ListTile(
+                      title: const Text('🍖 Comida'),
+                      trailing: Text(
+                        '${resources['food']} (+${rates['food']}/min)',
+                      ),
+                    ),
+                  ),
+                  Card(
+                    child: ListTile(
+                      title: const Text('💧 Agua'),
+                      trailing: Text(
+                        '${resources['water']} (+${rates['water']}/min)',
+                      ),
+                    ),
+                  ),
+                  Card(
+                    child: ListTile(
+                      title: const Text('⚡ Energía'),
+                      trailing: Text(
+                        '${resources['energy']} (+${rates['energy']}/min)',
+                      ),
+                    ),
+                  ),
+                  Card(
+                    child: ListTile(
+                      title: const Text('🔩 Metal'),
+                      trailing: Text(
+                        '${resources['metal']} (+${rates['metal']}/min)',
+                      ),
+                    ),
+                  ),
+                  Card(
+                    child: ListTile(
+                      title: const Text('Última actualización'),
+                      subtitle: Text('${resources['last_updated']}'),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                const Text(
+                  'Edificios',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                Card(
-                  child: ListTile(
-                    title: const Text('Última actualización'),
-                    subtitle: Text('${resources['last_updated']}'),
-                  ),
-                ),
+                const SizedBox(height: 10),
+                ...buildings.map((b) {
+                  return Card(
+                    child: ListTile(
+                      title: Text(_buildingLabel('${b['type']}')),
+                      trailing: Text('Nivel ${b['level']}'),
+                    ),
+                  );
+                }),
               ],
-            ],
+            ),
           );
         },
       ),
