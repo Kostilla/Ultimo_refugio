@@ -15,10 +15,18 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final screens = [
       const ColonyBaseScreen(),
-      const Scaffold(body: Center(child: Text('Edificios'))),
-      const Scaffold(body: Center(child: Text('Eventos'))),
-      const Scaffold(body: Center(child: Text('Colonia'))),
-      const Scaffold(body: Center(child: Text('Perfil'))),
+      const Scaffold(
+        body: Center(child: Text('Edificios')),
+      ),
+      const Scaffold(
+        body: Center(child: Text('Eventos')),
+      ),
+      const Scaffold(
+        body: Center(child: Text('Colonia')),
+      ),
+      const Scaffold(
+        body: Center(child: Text('Perfil')),
+      ),
     ];
 
     return Scaffold(
@@ -27,11 +35,26 @@ class _HomeShellState extends State<HomeShell> {
         currentIndex: _index,
         onTap: (i) => setState(() => _index = i),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Base'),
-          BottomNavigationBarItem(icon: Icon(Icons.build), label: 'Edificios'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Eventos'),
-          BottomNavigationBarItem(icon: Icon(Icons.group), label: 'Colonia'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Base',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.build),
+            label: 'Edificios',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.warning),
+            label: 'Eventos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.group),
+            label: 'Colonia',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
+          ),
         ],
       ),
     );
@@ -41,81 +64,82 @@ class _HomeShellState extends State<HomeShell> {
 class ColonyBaseScreen extends StatelessWidget {
   const ColonyBaseScreen({super.key});
 
+  int _cap(int value, int max) => value > max ? max : value;
+
   Future<Map<String, dynamic>?> _loadColony() async {
-  final user = supabase.auth.currentUser;
-  if (user == null) return null;
+    final user = supabase.auth.currentUser;
+    if (user == null) return null;
 
-  final membership = await supabase
-      .from('colony_members')
-      .select('role, colony_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    final membership = await supabase
+        .from('colony_members')
+        .select('role, colony_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
 
-  if (membership == null) return null;
+    if (membership == null) return null;
 
-  final colonyId = membership['colony_id'];
+    final colonyId = membership['colony_id'];
 
-  final colony = await supabase
-      .from('colonies')
-      .select('name, join_code')
-      .eq('id', colonyId)
-      .single();
+    final colony = await supabase
+        .from('colonies')
+        .select('name, join_code')
+        .eq('id', colonyId)
+        .single();
 
-  final resources = await supabase
-      .from('colony_resources')
-      .select()
-      .eq('colony_id', colonyId)
-      .maybeSingle();
+    final resources = await supabase
+        .from('colony_resources')
+        .select()
+        .eq('colony_id', colonyId)
+        .maybeSingle();
 
-  if (resources == null) {
+    if (resources == null) {
+      return {
+        'role': membership['role'],
+        'name': colony['name'],
+        'join_code': colony['join_code'],
+        'resources': null,
+      };
+    }
+
+    final rawLastUpdated = resources['last_updated'];
+    final lastUpdated = rawLastUpdated == null
+        ? null
+        : DateTime.parse(rawLastUpdated.toString()).toUtc();
+
+    if (lastUpdated != null) {
+      final now = DateTime.now().toUtc();
+      final diffMinutes = now.difference(lastUpdated).inMinutes;
+
+      if (diffMinutes > 0 && diffMinutes < 1440) {
+        final updatedResources = {
+          'food': _cap((resources['food'] as int) + diffMinutes * 1, 500),
+          'water': _cap((resources['water'] as int) + diffMinutes * 1, 500),
+          'energy': _cap((resources['energy'] as int) + diffMinutes * 2, 500),
+          'metal': _cap((resources['metal'] as int) + diffMinutes * 1, 500),
+          'last_updated': now.toIso8601String(),
+        };
+
+        await supabase
+            .from('colony_resources')
+            .update(updatedResources)
+            .eq('colony_id', colonyId);
+
+        resources['food'] = updatedResources['food'];
+        resources['water'] = updatedResources['water'];
+        resources['energy'] = updatedResources['energy'];
+        resources['metal'] = updatedResources['metal'];
+        resources['last_updated'] = updatedResources['last_updated'];
+      }
+    }
+
     return {
       'role': membership['role'],
       'name': colony['name'],
       'join_code': colony['join_code'],
-      'resources': null,
+      'resources': resources,
     };
   }
-
-  final rawLastUpdated = resources['last_updated'];
-final lastUpdated = rawLastUpdated == null
-    ? null
-    : DateTime.parse(rawLastUpdated.toString()).toUtc();
-
-if (lastUpdated != null) {
-  final now = DateTime.now().toUtc();
-  final diffMinutes = now.difference(lastUpdated).inMinutes;
-
-    if (diffMinutes > 0 && diffMinutes < 1440) {
-      int cap(int value, int max) => value > max ? max : value;
-
-      final updatedResources = {
-        'food': cap((resources['food'] as int) + diffMinutes * 1, 500),
-        'water': cap((resources['water'] as int) + diffMinutes * 1, 500),
-        'energy': cap((resources['energy'] as int) + diffMinutes * 2, 500),
-        'metal': cap((resources['metal'] as int) + diffMinutes * 1, 500),
-        'last_updated': now.toIso8601String(),
-      };
-
-      await supabase
-          .from('colony_resources')
-          .update(updatedResources)
-          .eq('colony_id', colonyId);
-
-      resources['food'] = updatedResources['food'];
-      resources['water'] = updatedResources['water'];
-      resources['energy'] = updatedResources['energy'];
-      resources['metal'] = updatedResources['metal'];
-      resources['last_updated'] = updatedResources['last_updated'];
-    }
-  }
-
-  return {
-    'role': membership['role'],
-    'name': colony['name'],
-    'join_code': colony['join_code'],
-    'resources': resources,
-  };
-}
 
   @override
   Widget build(BuildContext context) {
@@ -127,7 +151,9 @@ if (lastUpdated != null) {
         future: _loadColony(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           if (snapshot.hasError) {
@@ -145,52 +171,71 @@ if (lastUpdated != null) {
 
           final resources = data['resources'];
 
-          return Padding(
+          return ListView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  data['name'],
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+            children: [
+              Text(
+                data['name'],
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 16),
-
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  title: const Text('Código'),
+                  subtitle: Text(data['join_code']),
+                ),
+              ),
+              Card(
+                child: ListTile(
+                  title: const Text('Rol'),
+                  subtitle: Text(data['role']),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Recursos',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (resources != null) ...[
                 Card(
                   child: ListTile(
-                    title: const Text('Código'),
-                    subtitle: Text(data['join_code']),
+                    title: const Text('🍖 Comida'),
+                    trailing: Text('${resources['food']}'),
                   ),
                 ),
-
                 Card(
                   child: ListTile(
-                    title: const Text('Rol'),
-                    subtitle: Text(data['role']),
+                    title: const Text('💧 Agua'),
+                    trailing: Text('${resources['water']}'),
                   ),
                 ),
-
-                const SizedBox(height: 20),
-                const Text(
-                  'Recursos',
-                  style: TextStyle(fontSize: 20),
+                Card(
+                  child: ListTile(
+                    title: const Text('⚡ Energía'),
+                    trailing: Text('${resources['energy']}'),
+                  ),
                 ),
-
-                const SizedBox(height: 10),
-
-                if (resources != null) ...[
-                  Text('🍖 Comida: ${resources['food']}'),
-                  Text('💧 Agua: ${resources['water']}'),
-                  Text('⚡ Energía: ${resources['energy']}'),
-                  Text('🔩 Metal: ${resources['metal']}'),
-                  const SizedBox(height: 12),
-                  Text('Última actualización: ${resources['last_updated']}'),
-                ]
+                Card(
+                  child: ListTile(
+                    title: const Text('🔩 Metal'),
+                    trailing: Text('${resources['metal']}'),
+                  ),
+                ),
+                Card(
+                  child: ListTile(
+                    title: const Text('Última actualización'),
+                    subtitle: Text('${resources['last_updated']}'),
+                  ),
+                ),
               ],
-            ),
+            ],
           );
         },
       ),
