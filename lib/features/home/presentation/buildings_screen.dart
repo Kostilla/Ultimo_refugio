@@ -30,7 +30,35 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
         .eq('colony_id', colonyId)
         .maybeSingle();
 
-    final buildings = await supabase
+    var buildings = await supabase
+        .from('colony_buildings')
+        .select()
+        .eq('colony_id', colonyId);
+
+    final now = DateTime.now().toUtc();
+
+    for (final b in buildings) {
+      final isUpgrading = b['is_upgrading'] == true;
+      final upgradeEndsAtRaw = b['upgrade_ends_at'];
+
+      if (isUpgrading && upgradeEndsAtRaw != null) {
+        final upgradeEndsAt =
+            DateTime.parse(upgradeEndsAtRaw.toString()).toUtc();
+
+        if (!upgradeEndsAt.isAfter(now)) {
+          await supabase
+              .from('colony_buildings')
+              .update({
+                'level': (b['level'] as num).toInt() + 1,
+                'is_upgrading': false,
+                'upgrade_ends_at': null,
+              })
+              .eq('id', b['id']);
+        }
+      }
+    }
+
+    buildings = await supabase
         .from('colony_buildings')
         .select()
         .eq('colony_id', colonyId);
@@ -103,6 +131,10 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
     }
   }
 
+  int _upgradeDurationMinutes(int level) {
+    return level * 2;
+  }
+
   String _formatCost(Map<String, int> cost) {
     final parts = <String>[];
 
@@ -136,7 +168,7 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
         metal >= (cost['metal'] ?? 0);
   }
 
-  Future<void> _upgradeBuilding({
+  Future<void> _startUpgrade({
     required String colonyId,
     required String buildingId,
     required String type,
@@ -165,9 +197,32 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
       'metal': currentMetal - (cost['metal'] ?? 0),
     }).eq('colony_id', colonyId);
 
+    final endsAt = DateTime.now()
+        .toUtc()
+        .add(Duration(minutes: _upgradeDurationMinutes(currentLevel)));
+
     await supabase.from('colony_buildings').update({
-      'level': currentLevel + 1,
+      'is_upgrading': true,
+      'upgrade_ends_at': endsAt.toIso8601String(),
     }).eq('id', buildingId);
+  }
+
+  String _formatRemainingTime(String? endsAtRaw) {
+    if (endsAtRaw == null) return 'Finalizando...';
+
+    final endsAt = DateTime.parse(endsAtRaw).toUtc();
+    final now = DateTime.now().toUtc();
+    final diff = endsAt.difference(now);
+
+    if (diff.inSeconds <= 0) return 'Finalizando...';
+
+    final minutes = diff.inMinutes;
+    final seconds = diff.inSeconds % 60;
+
+    if (minutes > 0) {
+      return '${minutes}m ${seconds}s';
+    }
+    return '${seconds}s';
   }
 
   @override
@@ -202,18 +257,14 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
           final resources = data['resources'] as Map<String, dynamic>?;
           final buildings = (data['buildings'] as List<dynamic>? ?? []);
 
-          final currentFood = resources == null
-              ? 0
-              : (resources['food'] as num).toInt();
-          final currentWater = resources == null
-              ? 0
-              : (resources['water'] as num).toInt();
-          final currentEnergy = resources == null
-              ? 0
-              : (resources['energy'] as num).toInt();
-          final currentMetal = resources == null
-              ? 0
-              : (resources['metal'] as num).toInt();
+          final currentFood =
+              resources == null ? 0 : (resources['food'] as num).toInt();
+          final currentWater =
+              resources == null ? 0 : (resources['water'] as num).toInt();
+          final currentEnergy =
+              resources == null ? 0 : (resources['energy'] as num).toInt();
+          final currentMetal =
+              resources == null ? 0 : (resources['metal'] as num).toInt();
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -250,23 +301,32 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                 ...buildings.map((b) {
                   final type = '${b['type']}';
                   final level = (b['level'] as num).toInt();
+                  final isUpgrading = b['is_upgrading'] == true;
+                  final upgradeEndsAt = b['upgrade_ends_at'] as String?;
                   final cost = _upgradeCost(type, level);
                   final canAfford = _canAfford(resources, cost);
+                  final duration = _upgradeDurationMinutes(level);
 
                   return Card(
                     child: ListTile(
                       title: Text(_buildingLabel(type)),
                       subtitle: Text(
-                        '${_buildingDescription(type)}\n'
-                        'Nivel actual: $level\n'
-                        'Coste mejora: ${_formatCost(cost)}',
+                        isUpgrading
+                            ? '${_buildingDescription(type)}\n'
+                                'Nivel actual: $level\n'
+                                'Mejorando... ${_formatRemainingTime(upgradeEndsAt)}'
+                            : '${_buildingDescription(type)}\n'
+                                'Nivel actual: $level\n'
+                                'Coste mejora: ${_formatCost(cost)}\n'
+                                'Tiempo: ${duration} min',
                       ),
                       isThreeLine: true,
                       trailing: ElevatedButton(
-                        onPressed: canAfford
-                            ? () async {
+                        onPressed: isUpgrading || !canAfford
+                            ? null
+                            : () async {
                                 try {
-                                  await _upgradeBuilding(
+                                  await _startUpgrade(
                                     colonyId: colonyId,
                                     buildingId: b['id'] as String,
                                     type: type,
@@ -277,7 +337,7 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                                   if (!mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Edificio mejorado'),
+                                      content: Text('Mejora iniciada'),
                                     ),
                                   );
                                   setState(() {});
@@ -289,9 +349,8 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                                     ),
                                   );
                                 }
-                              }
-                            : null,
-                        child: const Text('Mejorar'),
+                              },
+                        child: Text(isUpgrading ? 'En curso' : 'Mejorar'),
                       ),
                     ),
                   );
