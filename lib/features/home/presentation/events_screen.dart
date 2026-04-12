@@ -160,11 +160,26 @@ class _EventsScreenState extends State<EventsScreen> {
     }).eq('id', event['id']);
   }
 
+  String _resourceLabel(String? resource) {
+    switch (resource) {
+      case 'food':
+        return 'Comida';
+      case 'water':
+        return 'Agua';
+      case 'energy':
+        return 'Energía';
+      case 'metal':
+        return 'Metal';
+      default:
+        return 'Recurso';
+    }
+  }
+
   String _effectText(Map<String, dynamic> event) {
-    final resource = event['effect_resource'];
+    final resource = event['effect_resource'] as String?;
     final amount = (event['effect_amount'] as num?)?.toInt() ?? 0;
     final sign = amount >= 0 ? '+' : '';
-    return '$sign$amount ${resource ?? ''}';
+    return '$sign$amount ${_resourceLabel(resource)}';
   }
 
   @override
@@ -230,7 +245,8 @@ class _EventsScreenState extends State<EventsScreen> {
                     child: ListTile(
                       title: Text('${event['title']}'),
                       subtitle: Text(
-                        '${event['description']}\nEfecto: ${_effectText(event)}',
+                        '${event['description']}\n'
+                        'Efecto: ${_effectText(event)}',
                       ),
                       isThreeLine: true,
                       trailing: ElevatedButton(
