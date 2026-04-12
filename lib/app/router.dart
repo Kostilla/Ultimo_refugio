@@ -9,6 +9,19 @@ import '../features/auth/presentation/register_screen.dart';
 import '../features/colony/presentation/create_or_join_colony_screen.dart';
 import '../features/home/presentation/home_shell.dart';
 
+Future<bool> hasColony() async {
+  final user = supabase.auth.currentUser;
+  if (user == null) return false;
+
+  final res = await supabase
+      .from('colony_members')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1);
+
+  return res.isNotEmpty;
+}
+
 final router = GoRouter(
   initialLocation: '/login',
   refreshListenable: GoRouterRefreshStream(

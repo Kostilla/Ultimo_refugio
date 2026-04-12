@@ -42,36 +42,74 @@ class ColonyBaseScreen extends StatelessWidget {
   const ColonyBaseScreen({super.key});
 
   Future<Map<String, dynamic>?> _loadColony() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return null;
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
 
-    final membership = await supabase
-        .from('colony_members')
-        .select('role, colony_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+  final membership = await supabase
+      .from('colony_members')
+      .select('role, colony_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (membership == null) return null;
+  if (membership == null) return null;
 
-    final colony = await supabase
-        .from('colonies')
-        .select('name, join_code')
-        .eq('id', membership['colony_id'])
-        .single();
+  final colonyId = membership['colony_id'];
 
-    final resources = await supabase
-        .from('colony_resources')
-        .select()
-        .eq('colony_id', membership['colony_id'])
-        .maybeSingle();
+  final colony = await supabase
+      .from('colonies')
+      .select('name, join_code')
+      .eq('id', colonyId)
+      .single();
 
+  final resources = await supabase
+      .from('colony_resources')
+      .select()
+      .eq('colony_id', colonyId)
+      .maybeSingle();
+
+  if (resources == null) {
     return {
       'role': membership['role'],
       'name': colony['name'],
       'join_code': colony['join_code'],
-      'resources': resources,
+      'resources': null,
     };
   }
+
+  final lastUpdated = DateTime.tryParse(resources['last_updated'] ?? '');
+  if (lastUpdated != null) {
+    final now = DateTime.now().toUtc();
+    final diffMinutes = now.difference(lastUpdated.toUtc()).inMinutes;
+
+    if (diffMinutes > 0) {
+      final updatedResources = {
+        'food': (resources['food'] as int) + diffMinutes * 1,
+        'water': (resources['water'] as int) + diffMinutes * 1,
+        'energy': (resources['energy'] as int) + diffMinutes * 2,
+        'metal': (resources['metal'] as int) + diffMinutes * 1,
+        'last_updated': now.toIso8601String(),
+      };
+
+      await supabase
+          .from('colony_resources')
+          .update(updatedResources)
+          .eq('colony_id', colonyId);
+
+      resources['food'] = updatedResources['food'];
+      resources['water'] = updatedResources['water'];
+      resources['energy'] = updatedResources['energy'];
+      resources['metal'] = updatedResources['metal'];
+      resources['last_updated'] = updatedResources['last_updated'];
+    }
+  }
+
+  return {
+    'role': membership['role'],
+    'name': colony['name'],
+    'join_code': colony['join_code'],
+    'resources': resources,
+  };
+}
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +180,8 @@ class ColonyBaseScreen extends StatelessWidget {
                   Text('💧 Agua: ${resources['water']}'),
                   Text('⚡ Energía: ${resources['energy']}'),
                   Text('🔩 Metal: ${resources['metal']}'),
+                  const SizedBox(height: 12),
+                  Text('Última actualización: ${resources['last_updated']}'),
                 ]
               ],
             ),
