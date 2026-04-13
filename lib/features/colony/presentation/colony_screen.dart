@@ -62,8 +62,20 @@ class _ColonyScreenState extends State<ColonyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Colonia'),
-      ),
+  title: const Text('Colonia'),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.person),
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const ProfileScreen(),
+          ),
+        );
+      },
+    ),
+  ],
+),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: _loadData(),
         builder: (context, snapshot) {
