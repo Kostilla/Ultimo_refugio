@@ -110,6 +110,23 @@ class ColonyBaseScreen extends StatelessWidget {
     }
   }
 
+	IconData _buildingIcon(String type) {
+  switch (type) {
+    case 'generator':
+      return Icons.bolt;
+    case 'farm':
+      return Icons.agriculture;
+    case 'water':
+      return Icons.water_drop;
+    case 'factory':
+      return Icons.precision_manufacturing;
+    case 'storage':
+      return Icons.warehouse;
+    default:
+      return Icons.home_work;
+  }
+}
+
   Future<Map<String, dynamic>?> _loadColony() async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
