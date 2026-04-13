@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ultimo_refugio/core/services/supabase_service.dart';
+import 'package:ultimo_refugio/features/profile/presentation/profile_screen.dart';
+
 
 class ColonyScreen extends StatefulWidget {
   const ColonyScreen({super.key});
