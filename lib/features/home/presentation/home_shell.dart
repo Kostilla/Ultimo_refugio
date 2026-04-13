@@ -110,22 +110,22 @@ class ColonyBaseScreen extends StatelessWidget {
     }
   }
 
-	IconData _buildingIcon(String type) {
-  switch (type) {
-    case 'generator':
-      return Icons.bolt;
-    case 'farm':
-      return Icons.agriculture;
-    case 'water':
-      return Icons.water_drop;
-    case 'factory':
-      return Icons.precision_manufacturing;
-    case 'storage':
-      return Icons.warehouse;
-    default:
-      return Icons.home_work;
+  IconData _buildingIcon(String type) {
+    switch (type) {
+      case 'generator':
+        return Icons.bolt;
+      case 'farm':
+        return Icons.agriculture;
+      case 'water':
+        return Icons.water_drop;
+      case 'factory':
+        return Icons.precision_manufacturing;
+      case 'storage':
+        return Icons.warehouse;
+      default:
+        return Icons.home_work;
+    }
   }
-}
 
   Future<Map<String, dynamic>?> _loadColony() async {
     final user = supabase.auth.currentUser;
@@ -199,8 +199,8 @@ class ColonyBaseScreen extends StatelessWidget {
         : DateTime.parse(rawLastUpdated.toString()).toUtc();
 
     if (lastUpdated != null) {
-      final now = DateTime.now().toUtc();
-      final diffMinutes = now.difference(lastUpdated).inMinutes;
+      final nowResources = DateTime.now().toUtc();
+      final diffMinutes = nowResources.difference(lastUpdated).inMinutes;
 
       if (diffMinutes > 0 && diffMinutes < 1440) {
         final updatedResources = {
@@ -220,7 +220,7 @@ class ColonyBaseScreen extends StatelessWidget {
             (resources['metal'] as int) + diffMinutes * metalRate,
             capacity,
           ),
-          'last_updated': now.toIso8601String(),
+          'last_updated': nowResources.toIso8601String(),
         };
 
         await supabase
@@ -241,12 +241,12 @@ class ColonyBaseScreen extends StatelessWidget {
         .select('id, status, ends_at')
         .eq('colony_id', colonyId);
 
-    final now = DateTime.now().toUtc();
+    final nowExpeditions = DateTime.now().toUtc();
 
     for (final e in expeditions) {
       if (e['status'] == 'in_progress' && e['ends_at'] != null) {
         final endsAt = DateTime.parse(e['ends_at'].toString()).toUtc();
-        if (!endsAt.isAfter(now)) {
+        if (!endsAt.isAfter(nowExpeditions)) {
           await supabase
               .from('colony_expeditions')
               .update({'status': 'ready'})
@@ -441,21 +441,76 @@ class ColonyBaseScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: 20),
                 const Text(
-                  'Edificios',
+                  'Vista de la base',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 10),
-                ...buildings.map((b) {
-                  return Card(
-                    child: ListTile(
-                      title: Text(_buildingLabel('${b['type']}')),
-                      trailing: Text('Nivel ${b['level']}'),
-                    ),
-                  );
-                }),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.15,
+                    children: buildings.map((b) {
+                      final type = '${b['type']}';
+                      final level = b['level'];
+                      final isUpgrading = b['is_upgrading'] == true;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: const [
+                            BoxShadow(
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                              color: Colors.black12,
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _buildingIcon(type),
+                                size: 42,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                _buildingLabel(type),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text('Nivel $level'),
+                              if (isUpgrading) ...[
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Mejorando...',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ],
             ),
           );
