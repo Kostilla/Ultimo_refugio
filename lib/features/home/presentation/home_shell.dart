@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:ultimo_refugio/core/services/supabase_service.dart';
-import 'buildings_screen.dart';
-import 'events_screen.dart';
 import 'package:ultimo_refugio/features/colony/presentation/colony_screen.dart';
 import 'package:ultimo_refugio/features/profile/presentation/profile_screen.dart';
+import 'buildings_screen.dart';
+import 'events_screen.dart';
 import 'expeditions_screen.dart';
-
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -19,7 +18,7 @@ class _HomeShellState extends State<HomeShell> {
 
   void _openEventsTab() {
     setState(() {
-      _index = 2;
+      _index = 3;
     });
   }
 
@@ -30,9 +29,9 @@ class _HomeShellState extends State<HomeShell> {
         onOpenEvents: _openEventsTab,
       ),
       const BuildingsScreen(),
+      const ExpeditionsScreen(),
       const EventsScreen(),
       const ColonyScreen(),
-      const ExpeditionsScreen(),
     ];
 
     return Scaffold(
@@ -50,16 +49,16 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Edificios',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Exped.',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.warning),
             label: 'Eventos',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.group),
             label: 'Colonia',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Exped.',
           ),
         ],
       ),
