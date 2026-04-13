@@ -60,10 +60,15 @@ class _ExpeditionsScreenState extends State<ExpeditionsScreen> {
         .eq('colony_id', colonyId)
         .order('started_at', ascending: false);
 
+    final hasActiveExpedition = expeditions.any(
+      (e) => e['status'] == 'in_progress',
+    );
+
     return {
       'colony_id': colonyId,
       'resources': resources,
       'expeditions': expeditions,
+      'has_active_expedition': hasActiveExpedition,
     };
   }
 
@@ -133,9 +138,14 @@ class _ExpeditionsScreenState extends State<ExpeditionsScreen> {
     required String colonyId,
     required Map<String, dynamic>? resources,
     required Map<String, dynamic> template,
+    required bool hasActiveExpedition,
   }) async {
     if (resources == null) {
       throw Exception('No se encontraron recursos');
+    }
+
+    if (hasActiveExpedition) {
+      throw Exception('Ya hay una expedición en curso');
     }
 
     final currentFood = (resources['food'] as num?)?.toInt() ?? 0;
@@ -275,6 +285,8 @@ class _ExpeditionsScreenState extends State<ExpeditionsScreen> {
           final colonyId = data['colony_id'] as String;
           final resources = data['resources'] as Map<String, dynamic>?;
           final expeditions = (data['expeditions'] as List<dynamic>? ?? []);
+          final hasActiveExpedition =
+              data['has_active_expedition'] as bool? ?? false;
 
           final currentFood =
               resources == null ? 0 : (resources['food'] as num).toInt();
@@ -300,6 +312,17 @@ class _ExpeditionsScreenState extends State<ExpeditionsScreen> {
                     trailing: Text('$currentWater'),
                   ),
                 ),
+                const SizedBox(height: 16),
+                if (hasActiveExpedition)
+                  const Card(
+                    child: ListTile(
+                      leading: Icon(Icons.travel_explore),
+                      title: Text('Ya hay una expedición en curso'),
+                      subtitle: Text(
+                        'Debes esperar a que termine antes de enviar otra.',
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 20),
                 const Text(
                   'Enviar expedición',
@@ -309,8 +332,9 @@ class _ExpeditionsScreenState extends State<ExpeditionsScreen> {
                 ...templates.map((t) {
                   final costFood = t['cost_food'];
                   final costWater = t['cost_water'];
-                  final canStart =
+                  final canAfford =
                       currentFood >= costFood && currentWater >= costWater;
+                  final canStart = canAfford && !hasActiveExpedition;
 
                   return Card(
                     child: ListTile(
@@ -329,6 +353,7 @@ class _ExpeditionsScreenState extends State<ExpeditionsScreen> {
                                     colonyId: colonyId,
                                     resources: resources,
                                     template: t,
+                                    hasActiveExpedition: hasActiveExpedition,
                                   );
 
                                   if (!mounted) return;
