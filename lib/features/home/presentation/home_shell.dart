@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ultimo_refugio/core/services/supabase_service.dart';
 import 'package:ultimo_refugio/features/colony/presentation/colony_screen.dart';
-import 'package:ultimo_refugio/features/profile/presentation/profile_screen.dart';
 import 'buildings_screen.dart';
 import 'events_screen.dart';
 import 'expeditions_screen.dart';
@@ -16,6 +15,18 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
+  void _openBuildingsTab() {
+    setState(() {
+      _index = 1;
+    });
+  }
+
+  void _openExpeditionsTab() {
+    setState(() {
+      _index = 2;
+    });
+  }
+
   void _openEventsTab() {
     setState(() {
       _index = 3;
@@ -26,6 +37,8 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final screens = [
       ColonyBaseScreen(
+        onOpenBuildings: _openBuildingsTab,
+        onOpenExpeditions: _openExpeditionsTab,
         onOpenEvents: _openEventsTab,
       ),
       const BuildingsScreen(),
@@ -69,9 +82,13 @@ class _HomeShellState extends State<HomeShell> {
 class ColonyBaseScreen extends StatelessWidget {
   const ColonyBaseScreen({
     super.key,
+    required this.onOpenBuildings,
+    required this.onOpenExpeditions,
     required this.onOpenEvents,
   });
 
+  final VoidCallback onOpenBuildings;
+  final VoidCallback onOpenExpeditions;
   final VoidCallback onOpenEvents;
 
   int _cap(int value, int max) => value > max ? max : value;
@@ -139,6 +156,8 @@ class ColonyBaseScreen extends StatelessWidget {
           'metal': 0,
         },
         'capacity': 0,
+        'upgrading_building_count': 0,
+        'ready_expedition_count': 0,
         'active_event_count': 0,
       };
     }
@@ -200,6 +219,36 @@ class ColonyBaseScreen extends StatelessWidget {
       }
     }
 
+    var expeditions = await supabase
+        .from('colony_expeditions')
+        .select('id, status, ends_at')
+        .eq('colony_id', colonyId);
+
+    final now = DateTime.now().toUtc();
+
+    for (final e in expeditions) {
+      if (e['status'] == 'in_progress' && e['ends_at'] != null) {
+        final endsAt = DateTime.parse(e['ends_at'].toString()).toUtc();
+        if (!endsAt.isAfter(now)) {
+          await supabase
+              .from('colony_expeditions')
+              .update({'status': 'ready'})
+              .eq('id', e['id']);
+        }
+      }
+    }
+
+    expeditions = await supabase
+        .from('colony_expeditions')
+        .select('id, status, ends_at')
+        .eq('colony_id', colonyId);
+
+    final upgradingBuildingCount =
+        buildings.where((b) => b['is_upgrading'] == true).length;
+
+    final readyExpeditionCount =
+        expeditions.where((e) => e['status'] == 'ready').length;
+
     final activeEvents = await supabase
         .from('colony_events')
         .select('id')
@@ -219,6 +268,8 @@ class ColonyBaseScreen extends StatelessWidget {
         'metal': metalRate,
       },
       'capacity': capacity,
+      'upgrading_building_count': upgradingBuildingCount,
+      'ready_expedition_count': readyExpeditionCount,
       'active_event_count': activeEvents.length,
     };
   }
@@ -255,6 +306,10 @@ class ColonyBaseScreen extends StatelessWidget {
           final rates = data['rates'] as Map<String, dynamic>;
           final buildings = (data['buildings'] as List<dynamic>? ?? []);
           final capacity = data['capacity'];
+          final upgradingBuildingCount =
+              data['upgrading_building_count'] as int? ?? 0;
+          final readyExpeditionCount =
+              data['ready_expedition_count'] as int? ?? 0;
           final activeEventCount = data['active_event_count'] as int? ?? 0;
 
           return RefreshIndicator(
@@ -288,6 +343,26 @@ class ColonyBaseScreen extends StatelessWidget {
                     trailing: Text('$capacity'),
                   ),
                 ),
+                if (upgradingBuildingCount > 0)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.build_circle_outlined),
+                      title: const Text('Edificio en curso'),
+                      subtitle: const Text('Pulsa para ver la mejora activa'),
+                      trailing: Text('$upgradingBuildingCount'),
+                      onTap: onOpenBuildings,
+                    ),
+                  ),
+                if (readyExpeditionCount > 0)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.explore),
+                      title: const Text('Expedición lista'),
+                      subtitle: const Text('Pulsa para reclamar la recompensa'),
+                      trailing: Text('$readyExpeditionCount'),
+                      onTap: onOpenExpeditions,
+                    ),
+                  ),
                 if (activeEventCount > 0)
                   Card(
                     child: ListTile(
