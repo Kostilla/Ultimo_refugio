@@ -4,6 +4,7 @@ import 'buildings_screen.dart';
 import 'events_screen.dart';
 import 'package:ultimo_refugio/features/colony/presentation/colony_screen.dart';
 import 'package:ultimo_refugio/features/profile/presentation/profile_screen.dart';
+import 'expeditions_screen.dart';
 
 
 class HomeShell extends StatefulWidget {
