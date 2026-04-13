@@ -59,7 +59,7 @@ class _HomeShellState extends State<HomeShell> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
-            label: 'Perfil',
+            label: 'Exped.',
           ),
         ],
       ),
