@@ -63,10 +63,13 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
         .select()
         .eq('colony_id', colonyId);
 
+    final hasActiveUpgrade = buildings.any((b) => b['is_upgrading'] == true);
+
     return {
       'colony_id': colonyId,
       'resources': resources,
       'buildings': buildings,
+      'has_active_upgrade': hasActiveUpgrade,
     };
   }
 
@@ -183,9 +186,14 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
     required String type,
     required int currentLevel,
     required Map<String, dynamic>? resources,
+    required bool hasActiveUpgrade,
   }) async {
     if (resources == null) {
       throw Exception('No se encontraron recursos');
+    }
+
+    if (hasActiveUpgrade) {
+      throw Exception('Ya hay una mejora en curso');
     }
 
     final cost = _upgradeCost(type, currentLevel);
@@ -265,6 +273,7 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
           final colonyId = data['colony_id'] as String;
           final resources = data['resources'] as Map<String, dynamic>?;
           final buildings = (data['buildings'] as List<dynamic>? ?? []);
+          final hasActiveUpgrade = data['has_active_upgrade'] as bool? ?? false;
 
           final currentFood =
               resources == null ? 0 : (resources['food'] as num).toInt();
@@ -307,6 +316,16 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (hasActiveUpgrade)
+                  const Card(
+                    child: ListTile(
+                      leading: Icon(Icons.schedule),
+                      title: Text('Ya hay una mejora en curso'),
+                      subtitle: Text(
+                        'Debes esperar a que termine antes de iniciar otra.',
+                      ),
+                    ),
+                  ),
                 ...buildings.map((b) {
                   final type = '${b['type']}';
                   final level = (b['level'] as num).toInt();
@@ -315,6 +334,8 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                   final cost = _upgradeCost(type, level);
                   final canAfford = _canAfford(resources, cost);
                   final duration = _upgradeDurationMinutes(level);
+                  final canStart =
+                      !isUpgrading && !hasActiveUpgrade && canAfford;
 
                   return Card(
                     child: ListTile(
@@ -331,9 +352,8 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                       ),
                       isThreeLine: true,
                       trailing: ElevatedButton(
-                        onPressed: isUpgrading || !canAfford
-                            ? null
-                            : () async {
+                        onPressed: canStart
+                            ? () async {
                                 try {
                                   await _startUpgrade(
                                     colonyId: colonyId,
@@ -341,6 +361,7 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                                     type: type,
                                     currentLevel: level,
                                     resources: resources,
+                                    hasActiveUpgrade: hasActiveUpgrade,
                                   );
 
                                   if (!mounted) return;
@@ -358,7 +379,8 @@ class _BuildingsScreenState extends State<BuildingsScreen> {
                                     ),
                                   );
                                 }
-                              },
+                              }
+                            : null,
                         child: Text(isUpgrading ? 'En curso' : 'Mejorar'),
                       ),
                     ),
