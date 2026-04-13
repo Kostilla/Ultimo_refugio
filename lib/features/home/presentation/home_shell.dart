@@ -466,45 +466,52 @@ class ColonyBaseScreen extends StatelessWidget {
                       final level = b['level'];
                       final isUpgrading = b['is_upgrading'] == true;
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: const [
-                            BoxShadow(
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                              color: Colors.black12,
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _buildingIcon(type),
-                                size: 42,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                _buildingLabel(type),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text('Nivel $level'),
-                              if (isUpgrading) ...[
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Mejorando...',
-                                  style: TextStyle(fontSize: 12),
+                          onTap: onOpenBuildings,
+                          child: Ink(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                  color: Colors.black12,
                                 ),
                               ],
-                            ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _buildingIcon(type),
+                                    size: 42,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    _buildingLabel(type),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text('Nivel $level'),
+                                  if (isUpgrading) ...[
+                                    const SizedBox(height: 6),
+                                    const Text(
+                                      'Mejorando...',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       );
