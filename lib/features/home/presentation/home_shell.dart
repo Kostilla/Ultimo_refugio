@@ -31,7 +31,7 @@ class _HomeShellState extends State<HomeShell> {
       const BuildingsScreen(),
       const EventsScreen(),
       const ColonyScreen(),
-      const ProfileScreen(),
+      const ExpeditionsScreen(),
     ];
 
     return Scaffold(
