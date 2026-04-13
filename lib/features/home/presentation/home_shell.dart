@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ultimo_refugio/core/services/supabase_service.dart';
 import 'buildings_screen.dart';
 import 'events_screen.dart';
+import 'package:ultimo_refugio/features/colony/presentation/colony_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -27,9 +28,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
       const BuildingsScreen(),
       const EventsScreen(),
-      const Scaffold(
-        body: Center(child: Text('Colonia')),
-      ),
+      const ColonyScreen(),
       const Scaffold(
         body: Center(child: Text('Perfil')),
       ),
